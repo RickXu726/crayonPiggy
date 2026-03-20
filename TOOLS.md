@@ -38,3 +38,8 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 ---
 
 Add whatever helps you do your job. This is your cheat sheet.
+
+## 语雀
+
+- API Token: `<待配置>`
+- 默认知识库 ID: `<可选>`
