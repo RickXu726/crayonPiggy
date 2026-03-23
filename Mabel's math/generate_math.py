@@ -36,32 +36,46 @@ def generate_addition_subtraction(count):
 def generate_consecutive(count):
     """Generate consecutive addition/subtraction problems"""
     problems = []
-    for _ in range(count):
-        # Start with a number between 0 and 10
-        current = random.randint(0, 10)
+    attempts = 0
+    while len(problems) < count and attempts < count * 10:
+        attempts += 1
+        # Start with a number between 5 and 15 to allow room for operations
+        current = random.randint(5, 15)
         problem_parts = [str(current)]
+        valid = True
         
         # Add 1-2 more operations
         num_ops = random.randint(1, 2)
         for _ in range(num_ops):
-            if random.random() < 0.5:
-                # Addition
+            if current == 0:
+                # Must add if current is 0
                 add_val = random.randint(1, min(10, 20 - current))
+                problem_parts.append(f" + {add_val}")
+                current += add_val
+            elif current == 20:
+                # Must subtract if current is 20
+                sub_val = random.randint(1, min(10, current))
+                problem_parts.append(f" - {sub_val}")
+                current -= sub_val
+            elif random.random() < 0.5:
+                # Addition
+                add_val = random.randint(1, max(1, 20 - current))
                 problem_parts.append(f" + {add_val}")
                 current += add_val
             else:
                 # Subtraction
-                sub_val = random.randint(1, min(10, current))
+                sub_val = random.randint(1, max(1, current))
                 problem_parts.append(f" - {sub_val}")
                 current -= sub_val
+            
+            # Check bounds during generation
+            if current < 0 or current > 20:
+                valid = False
+                break
         
-        problem = "".join(problem_parts) + " = ___"
-        # Verify result is within 0-20
-        if 0 <= current <= 20:
+        if valid and 0 <= current <= 20:
+            problem = "".join(problem_parts) + " = ___"
             problems.append(problem)
-        else:
-            # Regenerate if out of bounds
-            problems.append(generate_consecutive(1)[0])
     return problems
 
 def generate_comparison(count):
