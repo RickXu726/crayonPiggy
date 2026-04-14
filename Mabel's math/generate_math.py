@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Generate math practice problems PDF for Mabel"""
-
 import random
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Register Chinese font (using a common one available on Linux)
+# Try to register a Chinese font, fallback to standard if not available
 try:
     pdfmetrics.registerFont(TTFont('SimSun', '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'))
     FONT_NAME = 'SimSun'
@@ -20,134 +16,178 @@ except:
     except:
         FONT_NAME = 'Helvetica'
 
-def generate_add_sub_problems(count=50):
+def generate_add_sub_problems(count):
     """Generate addition and subtraction problems within 20"""
     problems = []
     for _ in range(count):
-        if random.random() < 0.5:
-            # Addition: a + b where result <= 20
+        if random.choice([True, False]):  # Addition
             a = random.randint(0, 20)
             b = random.randint(0, 20 - a)
             problems.append(f"{a} + {b} = ___")
-        else:
-            # Subtraction: a - b where a >= b and result >= 0
+        else:  # Subtraction
             a = random.randint(0, 20)
             b = random.randint(0, a)
             problems.append(f"{a} - {b} = ___")
     return problems
 
-def generate_consecutive_problems(count=20):
-    """Generate consecutive addition/subtraction problems"""
+def generate_consecutive_problems(count):
+    """Generate consecutive addition/subtraction problems within 20"""
     problems = []
     for _ in range(count):
         # Generate 3 numbers with 2 operations
-        op1 = random.choice(['+', '-'])
-        op2 = random.choice(['+', '-'])
+        ops = random.choice([('+', '+'), ('+', '-'), ('-', '+'), ('-', '-')])
         
-        # Ensure all intermediate and final results are within 0-20
-        max_attempts = 100
-        for _ in range(max_attempts):
+        if ops == ('+', '+'):
+            a = random.randint(0, 18)
+            b = random.randint(0, 18 - a)
+            c = random.randint(0, 18 - a - b)
+            problems.append(f"{a} + {b} + {c} = ___")
+        elif ops == ('+', '-'):
             a = random.randint(0, 20)
-            b = random.randint(0, 20)
-            c = random.randint(0, 20)
-            
-            if op1 == '+':
-                mid1 = a + b
-            else:
-                mid1 = a - b
-            
-            if op2 == '+':
-                final = mid1 + c
-            else:
-                final = mid1 - c
-            
-            # Check all values are within 0-20
-            if 0 <= mid1 <= 20 and 0 <= final <= 20:
-                problems.append(f"{a} {op1} {b} {op2} {c} = ___")
-                break
-        else:
-            # Fallback: simple problem
-            problems.append(f"{a} {op1} {b} = ___")
-    
+            b = random.randint(0, a)
+            c = random.randint(0, a + b - a)  # Ensure result stays <= 20
+            c = min(c, a + b)
+            problems.append(f"{a} + {b} - {c} = ___")
+        elif ops == ('-', '+'):
+            a = random.randint(0, 20)
+            b = random.randint(0, a)
+            c = random.randint(0, 20 - (a - b))
+            problems.append(f"{a} - {b} + {c} = ___")
+        else:  # ('-', '-')
+            a = random.randint(0, 20)
+            b = random.randint(0, a)
+            c = random.randint(0, a - b)
+            problems.append(f"{a} - {b} - {c} = ___")
     return problems
 
-def generate_comparison_problems(count=10):
-    """Generate comparison problems (>, <, =)"""
+def generate_compare_problems(count):
+    """Generate comparison problems within 20"""
     problems = []
     for _ in range(count):
         a = random.randint(0, 20)
         b = random.randint(0, 20)
-        
-        if a > b:
-            problems.append(f"{a} ○ {b}")
-        elif a < b:
-            problems.append(f"{a} ○ {b}")
-        else:
-            problems.append(f"{a} ○ {b}")
-    
+        problems.append(f"{a} ○ {b}")
     return problems
 
 def create_pdf(date_str, output_path):
-    """Create PDF with math problems"""
+    """Create A4 PDF with math problems"""
     c = canvas.Canvas(output_path, pagesize=A4)
     width, height = A4
     
     # Title
-    c.setFont(FONT_NAME, 24)
+    if FONT_NAME != 'Helvetica':
+        c.setFont(FONT_NAME, 24)
+    else:
+        c.setFont("Helvetica", 24)
     title = f"{date_str} 算数"
-    title_width = c.stringWidth(title, FONT_NAME, 24)
-    c.drawCentredString(width / 2, height - 2 * cm, title)
+    c.drawCentredString(width / 2, height - 50, title)
     
     # Generate problems
     add_sub = generate_add_sub_problems(50)
     consecutive = generate_consecutive_problems(20)
-    comparison = generate_comparison_problems(10)
+    compare = generate_compare_problems(10)
     
     # Layout settings
-    c.setFont(FONT_NAME, 12)
-    line_height = 0.8 * cm
-    start_y = height - 4 * cm
-    left_margin = 2 * cm
-    col_width = (width - 4 * cm) / 2  # Two columns
+    left_margin = 50
+    col_width = 200
+    row_height = 25
+    start_y = height - 100
     
-    # Draw problems in two columns
-    all_problems = add_sub + consecutive + comparison
-    problems_per_page = 40
-    current_problem = 0
+    if FONT_NAME != 'Helvetica':
+        c.setFont(FONT_NAME, 12)
+    else:
+        c.setFont("Helvetica", 12)
     
-    page_num = 1
-    while current_problem < len(all_problems):
-        if page_num > 1:
+    # Section 1: Addition and Subtraction (50 problems, 5 columns x 10 rows)
+    c.drawString(left_margin, start_y, "一、加减法 (50 题)")
+    y_pos = start_y - 30
+    
+    for i, problem in enumerate(add_sub):
+        col = i % 5
+        row = i // 5
+        x_pos = left_margin + col * col_width
+        y = y_pos - row * row_height
+        
+        # New page if needed
+        if y < 50:
             c.showPage()
+            if FONT_NAME != 'Helvetica':
+                c.setFont(FONT_NAME, 12)
+            else:
+                c.setFont("Helvetica", 12)
+            y_pos = height - 50
+            row = 0
+            y = y_pos
+        
+        c.drawString(x_pos, y, problem)
+    
+    # Section 2: Consecutive Operations (20 problems)
+    y_pos = y - 40
+    if y_pos < 100:
+        c.showPage()
+        if FONT_NAME != 'Helvetica':
             c.setFont(FONT_NAME, 12)
+        else:
+            c.setFont("Helvetica", 12)
+        y_pos = height - 50
+    
+    c.drawString(left_margin, y_pos, "二、连加连减 (20 题)")
+    y_pos -= 30
+    
+    for i, problem in enumerate(consecutive):
+        col = i % 4
+        row = i // 4
+        x_pos = left_margin + col * (col_width + 50)
+        y = y_pos - row * row_height
         
-        y_pos = start_y
-        problems_on_this_page = 0
+        if y < 50:
+            c.showPage()
+            if FONT_NAME != 'Helvetica':
+                c.setFont(FONT_NAME, 12)
+            else:
+                c.setFont("Helvetica", 12)
+            y_pos = height - 50
+            row = 0
+            y = y_pos
         
-        while current_problem < len(all_problems) and problems_on_this_page < problems_per_page:
-            col = problems_on_this_page % 2
-            x_pos = left_margin + col * col_width
-            
-            # Add some spacing between columns
-            if col == 1:
-                x_pos += 0.5 * cm
-            
-            c.drawString(x_pos, y_pos, all_problems[current_problem])
-            current_problem += 1
-            problems_on_this_page += 1
-            
-            if problems_on_this_page % 2 == 0:
-                y_pos -= line_height
+        c.drawString(x_pos, y, problem)
+    
+    # Section 3: Compare (10 problems)
+    y_pos = y - 40
+    if y_pos < 100:
+        c.showPage()
+        if FONT_NAME != 'Helvetica':
+            c.setFont(FONT_NAME, 12)
+        else:
+            c.setFont("Helvetica", 12)
+        y_pos = height - 50
+    
+    c.drawString(left_margin, y_pos, "三、比大小 (10 题)")
+    y_pos -= 30
+    
+    for i, problem in enumerate(compare):
+        col = i % 5
+        row = i // 5
+        x_pos = left_margin + col * col_width
+        y = y_pos - row * row_height
         
-        page_num += 1
+        if y < 50:
+            c.showPage()
+            if FONT_NAME != 'Helvetica':
+                c.setFont(FONT_NAME, 12)
+            else:
+                c.setFont("Helvetica", 12)
+            y_pos = height - 50
+            row = 0
+            y = y_pos
+        
+        c.drawString(x_pos, y, problem)
     
     c.save()
-    return len(all_problems)
 
 if __name__ == "__main__":
     import sys
-    date_str = sys.argv[1] if len(sys.argv) > 1 else "2026-04-12"
-    output_path = sys.argv[2] if len(sys.argv) > 2 else f"/home/admin/.openclaw/workspace/Mabel's math/{date_str}.pdf"
-    
-    total = create_pdf(date_str, output_path)
-    print(f"Generated {total} problems in {output_path}")
+    date_str = sys.argv[1] if len(sys.argv) > 1 else "2026-04-14"
+    output_path = f"/home/admin/.openclaw/workspace/Mabel's math/{date_str}.pdf"
+    create_pdf(date_str, output_path)
+    print(f"PDF generated: {output_path}")
